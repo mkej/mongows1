@@ -2,13 +2,14 @@ package com.avsystem.mongows.benchmark;
 
 import com.avsystem.mongows.dao.ActorDao;
 import com.avsystem.mongows.dao.MovieDao;
-import com.avsystem.mongows.dao.impl.FakeActorDao;
-import com.avsystem.mongows.dao.impl.FakeMovieDao;
+import com.avsystem.mongows.dao.impl.*;
 import com.avsystem.mongows.data.Actor;
 import com.avsystem.mongows.data.Movie;
 import com.avsystem.mongows.data.gen.RandomSupplier;
 import com.avsystem.mongows.data.gen.SequentialActorSupplier;
 import com.avsystem.mongows.data.gen.SequentialMovieSupplier;
+import com.mongodb.DB;
+import com.mongodb.MongoClient;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
@@ -35,7 +36,7 @@ public class ReadBenchmark {
         new Runner(options).run();
     }
 
-    @Param
+    @Param({"EMBEDDED"})
     private DaoType daoType;
 
     @Param({"10", "100"})
@@ -55,9 +56,22 @@ public class ReadBenchmark {
         if (daoType == DaoType.FAKE) {
             actorDao = new FakeActorDao();
             movieDao = new FakeMovieDao(actorDao);
+        } else if (daoType == DaoType.REL) {
+            MongoClient client = new MongoClient();
+            DB db = client.getDB("warsztat");
+            actorDao = new RelMongoActorDao(db.getCollection("actors"));
+            movieDao = new RelMongoMovieDao(db, actorDao);
+        } else if (daoType == DaoType.EMBEDDED) {
+            MongoClient client = new MongoClient();
+            DB db = client.getDB("warsztat");
+            actorDao = new FakeActorDao();
+            movieDao = new EmbeddedMovieDao(db.getCollection("embMovies"));
         } else {
             throw new IllegalStateException();
         }
+
+        actorDao.removeAll();
+        movieDao.removeAll();
 
         List<Actor> actors = new ArrayList<>();
         SequentialActorSupplier actorSupplier = new SequentialActorSupplier();

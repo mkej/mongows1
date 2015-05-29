@@ -3,8 +3,12 @@ package com.avsystem.mongows.data.gen;
 import com.avsystem.mongows.dao.MovieDao;
 import com.avsystem.mongows.dao.impl.FakeActorDao;
 import com.avsystem.mongows.dao.impl.FakeMovieDao;
+import com.avsystem.mongows.dao.impl.RelMongoActorDao;
+import com.avsystem.mongows.dao.impl.RelMongoMovieDao;
 import com.avsystem.mongows.data.Actor;
 import com.avsystem.mongows.data.Movie;
+import com.mongodb.DB;
+import com.mongodb.MongoClient;
 import com.omertron.themoviedbapi.MovieDbException;
 import com.omertron.themoviedbapi.TheMovieDbApi;
 import com.omertron.themoviedbapi.model.credits.MediaCreditCast;
@@ -47,7 +51,13 @@ public class InjectorMain {
             return;
         }
 
-        MovieDao movieDao = new FakeMovieDao(new FakeActorDao());
+        MongoClient client = new MongoClient();
+
+        DB db = client.getDB("warsztat");
+
+        RelMongoActorDao actorDao = new RelMongoActorDao(db.getCollection("actors"));
+
+        MovieDao movieDao = new RelMongoMovieDao(db, actorDao);
 
         TheMovieDbApi api = new TheMovieDbApi(args[0]);
         for (MovieInfo movieInfo : api.getPopularMovieList(0, "en").getResults()) {
